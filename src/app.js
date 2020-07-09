@@ -18,5 +18,6 @@ app.get('/', (req, res) => {
 
 app.use('/api/users', require('../routes/users'));
 app.use('/api/auth', require('../routes/auth'));
+app.use('/api/tournament', require('../routes/tournament'));
 
 module.exports = app;

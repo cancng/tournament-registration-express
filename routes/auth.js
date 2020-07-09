@@ -2,7 +2,7 @@ const router = require('express').Router();
 const { check, validationResult } = require('express-validator');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
-const authMw = require('../middlewares/auth');
+const { authMw } = require('../middlewares/auth');
 const User = require('../models/User');
 
 /**
@@ -68,6 +68,7 @@ router.post(
       jwt.sign(
         payload,
         process.env.JWT_SECRET,
+        // TODO: change to '1 days' when production time
         { expiresIn: '1 days' },
         (err, encodedToken) => {
           if (err) throw err;
