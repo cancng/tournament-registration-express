@@ -1,6 +1,7 @@
 const router = require('express').Router();
 const { check, validationResult } = require('express-validator');
 const { authMw, isAdmin } = require('../middlewares/auth');
+const checkObjectId = require('../middlewares/checkObjectId');
 
 const Tournament = require('../models/Tournaments');
 
@@ -12,7 +13,7 @@ router.get('/', [authMw, isAdmin], (req, res) => {
 /**
  * @route POST /api/tournament/create
  * @desc Create a tournament
- * @access Private (only administrator)
+ * @access Private (only admin)
  */
 router.post(
   '/create',
@@ -52,8 +53,23 @@ router.post(
  */
 router.get('/list', async (req, res) => {
   try {
-    const tournament = await Tournament.find().select('-tournamentDetails');
-    res.json(tournament);
+    const tournament = await Tournament.find();
+    let data = tournament.map((trnmt) => {
+      return {
+        _id: trnmt._id,
+        name: trnmt.name,
+        eventDate: trnmt.eventDate,
+        teams: trnmt.tournamentDetails.map((item) => {
+          return {
+            captain: item.user,
+            name: item.teamName,
+          };
+        }),
+        isActive: trnmt.isActive,
+      };
+    });
+    // console.log(tournament);
+    res.json(data);
   } catch (err) {
     console.error(err.message);
     return res.status(500).json({ errors: 'Server error' });
@@ -61,14 +77,56 @@ router.get('/list', async (req, res) => {
 });
 
 /**
+ * @route DELETE /api/tournament/:tournamentId
+ * @desc Delete a tournament
+ * @access Private (only admin)
+ */
+router.delete(
+  '/:tournamentId',
+  [authMw, isAdmin, checkObjectId('tournamentId')],
+  async (req, res) => {
+    try {
+      const tournament = await Tournament.findById(req.params.tournamentId);
+      tournament.deleteOne();
+      res.json({ msg: 'Turnuva silindi' });
+    } catch (err) {
+      console.error(err.message);
+      return res.status(500).json({ errors: 'Server error' });
+    }
+  }
+);
+
+/**
+ * @route POST /api/tournament/setActivity/:tournamentId
+ * @desc Set tournament activity, is it active or not-active
+ * @access Private (only admin)
+ */
+router.post(
+  '/setActivity/:tournamentId',
+  [authMw, isAdmin, checkObjectId('tournamentId')],
+  async (req, res) => {
+    try {
+      const tournament = await Tournament.findById(req.params.tournamentId);
+      tournament.isActive = !tournament.isActive;
+      await tournament.save();
+      return res.json(tournament);
+    } catch (err) {
+      console.error(err.message);
+      return res.status(500).json({ errors: 'Server error' });
+    }
+  }
+);
+
+/**
  * @route POST /api/tournament/join/:tournamentId
  * @desc Register a team for tournament
  * @access Private
  */
-router.put(
+router.post(
   '/join/:tournamentId',
   [
     authMw,
+    checkObjectId('tournamentId'),
     [
       check('team_name', 'Takım adı boş bırakılamaz').not().isEmpty(),
       check('team_players', 'Oyuncular boş bırakılamaz').not().isEmpty(),
@@ -117,23 +175,27 @@ router.put(
  * @desc Remove the team registration
  * @access Private
  */
-router.delete('/left_team/:tournamentId/:teamId', authMw, async (req, res) => {
-  try {
-    const tournament = await Tournament.findById(req.params.tournamentId);
+router.delete(
+  '/left_team/:tournamentId/:teamId',
+  [authMw, checkObjectId('tournamentId')],
+  async (req, res) => {
+    try {
+      const tournament = await Tournament.findById(req.params.tournamentId);
 
-    tournament.tournamentDetails = tournament.tournamentDetails.filter(
-      (team) => team._id.toString() !== req.params.teamId
-    );
+      tournament.tournamentDetails = tournament.tournamentDetails.filter(
+        (team) => team._id.toString() !== req.params.teamId
+      );
 
-    await tournament.save();
-    return res.status(200).json({
-      msg:
-        'Turnuvadan kaydınız silindi, isterseniz tekrar kayıt olabilirsiniz.',
-    });
-  } catch (err) {
-    console.error(err.message);
-    res.status(500).json({ errors: 'Server error' });
+      await tournament.save();
+      return res.status(200).json({
+        msg:
+          'Turnuvadan kaydınız silindi, isterseniz tekrar kayıt olabilirsiniz.',
+      });
+    } catch (err) {
+      console.error(err.message);
+      res.status(500).json({ errors: 'Server error' });
+    }
   }
-});
+);
 
 module.exports = router;
