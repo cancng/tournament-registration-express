@@ -6,7 +6,7 @@ const TournamentSchema = new mongoose.Schema({
     required: true,
   },
   eventDate: {
-    type: String,
+    type: Date,
     required: true,
   },
   tournamentDetails: [
@@ -31,7 +31,7 @@ const TournamentSchema = new mongoose.Schema({
   },
   isActive: {
     type: Boolean,
-    default: false,
+    default: true,
   },
 });
 

@@ -8,7 +8,7 @@ const User = require('../models/User');
 /**
  * @route GET /api/auth
  * @desc test route
- * @access Public
+ * @access Private
  */
 router.get('/', authMw, async (req, res) => {
   // i am storing a user id in "req.user". i've done it inside of auth.js middleware
@@ -27,12 +27,11 @@ router.get('/', authMw, async (req, res) => {
  * @desc Authenticate User & get token
  * @access Public
  */
-
 router.post(
   '/',
   [
     check('email', 'Geçerli bir e-posta girin').isEmail(),
-    check('password', 'Şifre en az 6 karakter olmalı').exists(),
+    check('password', 'Şifre gerekli').exists(),
   ],
   async (req, res) => {
     const errors = validationResult(req);

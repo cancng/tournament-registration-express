@@ -30,11 +30,21 @@ router.post(
     if (!errors.isEmpty()) {
       return res.status(400).json({ errors: errors.array() });
     }
-    const { name, event_date } = req.body;
+    const { name, event_date, isActive } = req.body;
+    let today = new Date();
+    let mm = today.getMonth() + 1;
+    if (mm < 10) {
+      mm = '0' + mm;
+    }
+    let formatted = `${today.getFullYear()}-${mm}-${today.getDate()}`;
+    if (event_date < formatted) {
+      return res.json({ errors: 'Tarih şuandan geride olamaz' });
+    }
     try {
       const newTournament = new Tournament({
         name,
         eventDate: event_date,
+        isActive,
       });
       await newTournament.save();
       res.json(newTournament);
@@ -42,7 +52,6 @@ router.post(
       console.error(err.message);
       res.status(500).json({ errors: 'Server error' });
     }
-    // res.send('asdsad');
   }
 );
 
@@ -53,7 +62,7 @@ router.post(
  */
 router.get('/list', async (req, res) => {
   try {
-    const tournament = await Tournament.find();
+    const tournament = await Tournament.find().sort({ eventDate: 'desc' });
     let data = tournament.map((trnmt) => {
       return {
         _id: trnmt._id,
@@ -75,6 +84,38 @@ router.get('/list', async (req, res) => {
     return res.status(500).json({ errors: 'Server error' });
   }
 });
+
+/**
+ * @route GET /api/tournament/:tournamentId
+ * @desc Get a tournament
+ * @access Private
+ */
+router.get(
+  '/:tournamentId',
+  [authMw, checkObjectId('tournamentId')],
+  async (req, res) => {
+    try {
+      const tournament = await Tournament.findById(req.params.tournamentId);
+      let data = {
+        _id: tournament._id,
+        name: tournament.name,
+        eventDate: tournament.eventDate,
+        teams: tournament.tournamentDetails.map((item) => {
+          return {
+            captain: item.user,
+            name: item.teamName,
+          };
+        }),
+        isActive: tournament.isActive,
+      };
+      // console.log(tournament);
+      res.json(data);
+    } catch (err) {
+      console.error(err.message);
+      return res.status(500).json({ errors: 'Server Error' });
+    }
+  }
+);
 
 /**
  * @route DELETE /api/tournament/:tournamentId
@@ -153,7 +194,7 @@ router.post(
       );
       if (isRegistered.length > 0) {
         return res.status(400).json({
-          errors: 'Bu turnuvaya zaten kayıt yapmışsınız.',
+          errors: [{ msg: 'Bu turnuvaya zaten kayıt yapmışsınız.' }],
           team: {
             name: isRegistered[0].teamName,
             players: isRegistered[0].teamPlayers,
