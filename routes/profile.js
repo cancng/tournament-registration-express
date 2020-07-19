@@ -28,6 +28,7 @@ router.get('/registrations', authMw, async (req, res) => {
             user: team.user,
             teamName: team.teamName,
             tournamentId: trnmt._id,
+            teamId: team._id,
           };
         });
       data.push(...deneme2);
