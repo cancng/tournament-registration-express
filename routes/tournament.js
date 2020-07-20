@@ -223,9 +223,16 @@ router.delete(
     try {
       const tournament = await Tournament.findById(req.params.tournamentId);
 
-      tournament.tournamentDetails = tournament.tournamentDetails.filter(
+      /* tournament.tournamentDetails = tournament.tournamentDetails.filter(
         (team) => team._id.toString() !== req.params.teamId
-      );
+      ); */
+      tournament.tournamentDetails.forEach((team, index) => {
+        if (team.user.toString() === req.user.id) {
+          if (team._id.toString() === req.params.teamId) {
+            tournament.tournamentDetails.splice(index, 1);
+          }
+        }
+      });
 
       await tournament.save();
       return res.status(200).json({

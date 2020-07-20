@@ -67,13 +67,53 @@ router.post(
       jwt.sign(
         payload,
         process.env.JWT_SECRET,
-        // TODO: change to '1 days' when production time
         { expiresIn: '1 days' },
         (err, encodedToken) => {
           if (err) throw err;
           res.json({ token: encodedToken });
         }
       );
+    } catch (err) {
+      console.error(err.message);
+      res.status(500).send('Server error');
+    }
+  }
+);
+/**
+ * @route POST /api/auth/changepassword
+ * @desc Change the user password
+ * @access Private
+ */
+router.post(
+  '/changepassword',
+  [
+    authMw,
+    [
+      check('password', 'Eski şifre en az 6 karakter olmalıdır').isLength({
+        min: 6,
+      }),
+      check('new_password', 'Yeni şifre en az 6 karakter olmalıdır').isLength({
+        min: 6,
+      }),
+    ],
+  ],
+  async (req, res) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ errors: errors.array() });
+    }
+    const { password, new_password } = req.body;
+    try {
+      let user = await User.findById(req.user.id);
+
+      const isPasswordMatch = await bcrypt.compare(password, user.password);
+      if (!isPasswordMatch) {
+        return res.status(400).json({ errors: [{ msg: 'Eski şifre yanlış' }] });
+      }
+      const salt = await bcrypt.genSalt(10);
+      user.password = await bcrypt.hash(new_password, salt);
+      await user.save();
+      return res.json({ msg: 'Şifre değişikliği tamamlandı' });
     } catch (err) {
       console.error(err.message);
       res.status(500).send('Server error');
