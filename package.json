@@ -19,7 +19,9 @@
     "helmet": "^3.23.3",
     "jsonwebtoken": "^8.5.1",
     "mongoose": "^5.9.22",
-    "normalize-url": "^5.0.0"
+    "node-fetch": "^2.6.0",
+    "normalize-url": "^5.0.0",
+    "querystring": "^0.2.0"
   },
   "devDependencies": {
     "nodemon": "^2.0.4"

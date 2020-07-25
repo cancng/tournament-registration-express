@@ -4,6 +4,9 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const { authMw } = require('../middlewares/auth');
 const User = require('../models/User');
+const rcSecretKey = '6LcrQbQZAAAAACpo8mGmKbUb2cRvx8I92VJ8jhCX';
+const { stringify } = require('querystring');
+const fetch = require('node-fetch');
 
 /**
  * @route GET /api/auth
@@ -39,11 +42,31 @@ router.post(
       return res.status(400).json({ errors: errors.array() });
     }
 
-    const { email, password } = req.body;
+    const { email, password, captcha } = req.body;
+
+    if (!captcha)
+      return res
+        .status(400)
+        .json({ errors: [{ msg: 'ReCAPTCHA doğrulayınız' }] });
+
+    const query = stringify({
+      secret: rcSecretKey,
+      response: captcha,
+      remoteip: req.connection.remoteAddress,
+    });
+    const verifyURL = `https://google.com/recaptcha/api/siteverify?${query}`;
+
+    // Make a request to verifyURL
+    const body = fetch(verifyURL).then((res) => res.json());
+
+    // If not successful
+    if (body.success !== undefined && !body.success)
+      return res.status(400).json({ errors: [{ msg: 'ReCAPTCHA hatası!' }] });
+    // If successful
+    // return res.json({ success: true, msg: 'Captcha passed', body });
 
     try {
       let user = await User.findOne({ email });
-
       if (!user) {
         return res
           .status(400)
