@@ -8,7 +8,11 @@ db();
 const app = express();
 app.use(
   cors({
-    origin: 'http://localhost:3000',
+    origin: [
+      'http://localhost:3000',
+      'https://turnuva.lolyama.com',
+      'http://turnuva.lolyama.com',
+    ],
   })
 );
 app.use(helmet());
