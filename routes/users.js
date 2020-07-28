@@ -10,17 +10,18 @@ const fetch = require('node-fetch');
 
 const User = require('../models/User');
 
+const { authMw, isAdmin } = require('../middlewares/auth');
+const checkObjectId = require('../middlewares/checkObjectId');
 /**
  * @route POST /api/users
  * @desc Register user
  * @access Public
  */
-
 router.post(
   '/',
   [
-    check('name', 'İsim boş bırakılamaz').not().isEmpty(),
-    check('email', 'Geçerli bir e-posta girin').isEmail(),
+    check('name', 'İsim boş bırakılamaz').not().trim().isEmpty(),
+    check('email', 'Geçerli bir e-posta girin').trim().isEmail(),
     check('password', 'Şifre en az 6 karakter olmalı').isLength({ min: 6 }),
   ],
   async (req, res) => {
@@ -91,6 +92,70 @@ router.post(
     } catch (err) {
       console.error(err.message);
       res.status(500).json({ errors: 'Server error' });
+    }
+  }
+);
+
+/**
+ * @route GET /api/users
+ * @desc List all registered users
+ * @access Private (only admin)
+ */
+router.get('/', [authMw, isAdmin], async (req, res) => {
+  try {
+    const users = await User.find().sort({ date: 'desc' });
+    return res.json(users);
+  } catch (err) {
+    console.error(err.message);
+    return res.status(500).json({ errors: 'Server error' });
+  }
+});
+
+/**
+ * @route POST /api/users/setActivity/:userId
+ * @desc Set user activity
+ * @access Private (only admin)
+ */
+router.post(
+  '/setActivity/:userId',
+  [authMw, isAdmin, checkObjectId('userId')],
+  async (req, res) => {
+    try {
+      const user = await User.findById(req.params.userId);
+      const isAdmin = user.get('isAdmin');
+      if (isAdmin === '1')
+        return res
+          .status(400)
+          .json({ errors: [{ msg: 'Admin pasif yapılamaz!' }] });
+      user.isActive = !user.isActive;
+      await user.save();
+      return res.json({ msg: 'success' });
+    } catch (err) {
+      console.error(err.message);
+      return res.status(500).json({ errors: 'Server error' });
+    }
+  }
+);
+
+/**
+ * @route DELETE /api/users/:userId
+ * @desc Delete a user from system
+ * @access Private (only admin)
+ */
+router.delete(
+  '/:userId',
+  [authMw, isAdmin, checkObjectId('userId')],
+  async (req, res) => {
+    try {
+      const user = await User.findById(req.params.userId);
+      const isAdmin = user.get('isAdmin');
+      if (isAdmin === '1')
+        return res.status(400).json({ msg: 'Admin üyenin kaydı silinemez!' });
+      user.deleteOne();
+      return res.json({ msg: 'Üye kaydı silindi!' });
+    } catch (err) {
+      console.error(err.message);
+      return res.status(500).json({ msg: 'Server error' });
     }
   }
 );

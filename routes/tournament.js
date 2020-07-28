@@ -2,6 +2,7 @@ const router = require('express').Router();
 const { check, validationResult } = require('express-validator');
 const { authMw, isAdmin } = require('../middlewares/auth');
 const checkObjectId = require('../middlewares/checkObjectId');
+const { playerRegistrar } = require('../utils');
 
 const Tournament = require('../models/Tournaments');
 
@@ -21,7 +22,7 @@ router.post(
     authMw,
     isAdmin,
     [
-      check('name', 'Turnuva adı boş bırakılamaz').not().isEmpty(),
+      check('name', 'Turnuva adı boş bırakılamaz').not().trim().isEmpty(),
       check('event_date', 'Turnuva tarihi boş bırakılamaz').not().isEmpty(),
     ],
   ],
@@ -40,6 +41,10 @@ router.post(
     if (event_date < formatted) {
       return res.json({ errors: 'Tarih şuandan geride olamaz' });
     }
+    /* if (name.trim() !== '')
+      return res
+        .status(400)
+        .json({ errors: [{ msg: 'Turnuva adı boş bırakılamaz' }] }); */
     try {
       const newTournament = new Tournament({
         name,
@@ -102,8 +107,10 @@ router.get(
         eventDate: tournament.eventDate,
         teams: tournament.tournamentDetails.map((item) => {
           return {
+            teamId: item._id,
             captain: item.user,
             name: item.teamName,
+            players: item.teamPlayers,
           };
         }),
         isActive: tournament.isActive,
@@ -139,7 +146,7 @@ router.delete(
 
 /**
  * @route POST /api/tournament/setActivity/:tournamentId
- * @desc Set tournament activity, is it active or not-active
+ * @desc Set tournament activity
  * @access Private (only admin)
  */
 router.post(
@@ -150,7 +157,7 @@ router.post(
       const tournament = await Tournament.findById(req.params.tournamentId);
       tournament.isActive = !tournament.isActive;
       await tournament.save();
-      return res.json(tournament);
+      return res.json({ msg: 'success' });
     } catch (err) {
       console.error(err.message);
       return res.status(500).json({ errors: 'Server error' });
@@ -169,8 +176,8 @@ router.post(
     authMw,
     checkObjectId('tournamentId'),
     [
-      check('team_name', 'Takım adı boş bırakılamaz').not().isEmpty(),
-      check('team_players', 'Oyuncular boş bırakılamaz').not().isEmpty(),
+      check('team_name', 'Takım adı boş bırakılamaz').not().trim().isEmpty(),
+      check('team_players', 'Oyuncular boş bırakılamaz').not().trim().isEmpty(),
     ],
   ],
   async (req, res) => {
@@ -182,7 +189,7 @@ router.post(
     const teamScheme = {
       user: req.user.id,
       teamName: team_name,
-      teamPlayers: team_players.split(',').map((player) => player.trim()),
+      teamPlayers: playerRegistrar(team_players),
     };
     try {
       const tournament = await Tournament.findById(req.params.tournamentId);
@@ -239,6 +246,32 @@ router.delete(
         msg:
           'Turnuvadan kaydınız silindi, isterseniz tekrar kayıt olabilirsiniz.',
       });
+    } catch (err) {
+      console.error(err.message);
+      res.status(500).json({ errors: 'Server error' });
+    }
+  }
+);
+
+/**
+ * @route DELETE /api/tournament/kick_team/:tournamentId/:teamId
+ * @desc Kick a team from tournament
+ * @access Private (only admin)
+ */
+router.delete(
+  '/kick_team/:tournamentId/:teamId',
+  [authMw, isAdmin, checkObjectId('teamId'), checkObjectId('tournamentId')],
+  async (req, res) => {
+    try {
+      const tournament = await Tournament.findById(req.params.tournamentId);
+      const teams = tournament.get('tournamentDetails');
+      tournament.tournamentDetails = teams.filter(
+        (team) => team._id.toString() !== req.params.teamId
+      );
+      await tournament.save();
+      return res
+        .status(200)
+        .json({ ...tournament._doc, teams: tournament.tournamentDetails });
     } catch (err) {
       console.error(err.message);
       res.status(500).json({ errors: 'Server error' });

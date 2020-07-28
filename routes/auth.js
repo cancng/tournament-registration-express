@@ -80,6 +80,16 @@ router.post(
           .status(400)
           .json({ errors: [{ msg: 'Bilgileriniz yanlış' }] });
       }
+      if (!user.isActive) {
+        return res.status(400).json({
+          errors: [
+            {
+              msg:
+                'Üyeliğiniz pasif duruma getirilmiş, yöneticiyle iletişime geçebilirsiniz',
+            },
+          ],
+        });
+      }
 
       const payload = {
         user: {
