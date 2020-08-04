@@ -91,7 +91,7 @@ router.post(
       );
     } catch (err) {
       console.error(err.message);
-      res.status(500).json({ errors: 'Server error' });
+      res.status(500).json({ errors: [{ msg: 'Server error' }] });
     }
   }
 );
@@ -107,7 +107,7 @@ router.get('/', [authMw, isAdmin], async (req, res) => {
     return res.json(users);
   } catch (err) {
     console.error(err.message);
-    return res.status(500).json({ errors: 'Server error' });
+    return res.status(500).json({ errors: [{ msg: 'Server error' }] });
   }
 });
 
@@ -132,7 +132,7 @@ router.post(
       return res.json({ msg: 'success' });
     } catch (err) {
       console.error(err.message);
-      return res.status(500).json({ errors: 'Server error' });
+      return res.status(500).json({ errors: [{ msg: 'Server error' }] });
     }
   }
 );

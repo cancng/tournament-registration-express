@@ -13,7 +13,7 @@ router.get('/registrations', authMw, async (req, res) => {
     const tournament = await Tournament.find().select('tournamentDetails');
     let data = [];
     tournament.forEach((trnmt) => {
-      const deneme2 = trnmt.tournamentDetails
+      const temporaryArray = trnmt.tournamentDetails
         .filter((team) => team.user.toString() === req.user.id)
         .map((team) => {
           return {
@@ -23,12 +23,12 @@ router.get('/registrations', authMw, async (req, res) => {
             teamId: team._id,
           };
         });
-      data.push(...deneme2);
+      data.push(...temporaryArray);
     });
     return res.json(data);
   } catch (err) {
     console.error(err.message);
-    return res.json({ errors: 'Server Error' });
+    return res.json({ errors: [{ msg: 'Server error' }] });
   }
 });
 

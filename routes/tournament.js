@@ -6,10 +6,10 @@ const { playerRegistrar } = require('../utils');
 
 const Tournament = require('../models/Tournaments');
 
-router.get('/', [authMw, isAdmin], (req, res) => {
+/* router.get('/', [authMw, isAdmin], (req, res) => {
   res.json({ msg: 'tournament route' });
   console.log(req.user);
-});
+}); */
 
 /**
  * @route POST /api/tournament/create
@@ -34,17 +34,19 @@ router.post(
     const { name, event_date, isActive } = req.body;
     let today = new Date();
     let mm = today.getMonth() + 1;
+    let dd = today.getDate();
     if (mm < 10) {
       mm = '0' + mm;
     }
-    let formatted = `${today.getFullYear()}-${mm}-${today.getDate()}`;
-    if (event_date < formatted) {
-      return res.json({ errors: 'Tarih şuandan geride olamaz' });
+    if (dd < 10) {
+      dd = '0' + dd;
     }
-    /* if (name.trim() !== '')
-      return res
-        .status(400)
-        .json({ errors: [{ msg: 'Turnuva adı boş bırakılamaz' }] }); */
+    let formatted = `${today.getFullYear()}-${mm}-${dd}`;
+    if (event_date <= formatted) {
+      return res.status(400).json({
+        errors: [{ msg: 'Tarih şuandan geride olamaz.' }],
+      });
+    }
     try {
       const newTournament = new Tournament({
         name,
@@ -55,7 +57,7 @@ router.post(
       res.json(newTournament);
     } catch (err) {
       console.error(err.message);
-      res.status(500).json({ errors: 'Server error' });
+      res.status(500).json({ errors: [{ msg: 'Server error' }] });
     }
   }
 );
@@ -86,7 +88,7 @@ router.get('/list', async (req, res) => {
     res.json(data);
   } catch (err) {
     console.error(err.message);
-    return res.status(500).json({ errors: 'Server error' });
+    return res.status(500).json({ errors: [{ msg: 'Server error' }] });
   }
 });
 
@@ -119,7 +121,7 @@ router.get(
       res.json(data);
     } catch (err) {
       console.error(err.message);
-      return res.status(500).json({ errors: 'Server Error' });
+      return res.status(500).json({ errors: [{ msg: 'Server error' }] });
     }
   }
 );
@@ -134,12 +136,18 @@ router.delete(
   [authMw, isAdmin, checkObjectId('tournamentId')],
   async (req, res) => {
     try {
-      const tournament = await Tournament.findById(req.params.tournamentId);
-      tournament.deleteOne();
-      res.json({ msg: 'Turnuva silindi' });
+      /* const tournament = await Tournament.findById(req.params.tournamentId);
+      tournament.deleteOne(); */
+      const result = await Tournament.findByIdAndDelete(
+        req.params.tournamentId
+      );
+      if (!result) {
+        return res.status(400).json({ errors: [{ msg: 'Turnuva ID yok' }] });
+      }
+      return res.json({ msg: 'Turnuva silindi' });
     } catch (err) {
       console.error(err.message);
-      return res.status(500).json({ errors: 'Server error' });
+      return res.status(500).json({ errors: [{ msg: 'Server error' }] });
     }
   }
 );
@@ -160,7 +168,7 @@ router.post(
       return res.json({ msg: 'success' });
     } catch (err) {
       console.error(err.message);
-      return res.status(500).json({ errors: 'Server error' });
+      return res.status(500).json({ errors: [{ msg: 'Server error' }] });
     }
   }
 );
@@ -213,7 +221,7 @@ router.post(
       res.json({ msg: 'Başarıyla kayıt oldunuz' });
     } catch (err) {
       console.error(err.message);
-      res.status(500).json({ errors: 'Server error' });
+      res.status(500).json({ errors: [{ msg: 'Server error' }] });
     }
   }
 );
@@ -248,7 +256,7 @@ router.delete(
       });
     } catch (err) {
       console.error(err.message);
-      res.status(500).json({ errors: 'Server error' });
+      res.status(500).json({ errors: [{ msg: 'Server error' }] });
     }
   }
 );
@@ -274,7 +282,7 @@ router.delete(
         .json({ ...tournament._doc, teams: tournament.tournamentDetails });
     } catch (err) {
       console.error(err.message);
-      res.status(500).json({ errors: 'Server error' });
+      res.status(500).json({ errors: [{ msg: 'Server error' }] });
     }
   }
 );

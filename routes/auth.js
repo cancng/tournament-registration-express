@@ -21,7 +21,7 @@ router.get('/', authMw, async (req, res) => {
     res.json(user);
   } catch (err) {
     console.error(err.message);
-    res.status(500).send('server error');
+    res.status(500).json({ errors: [{ msg: 'Server error' }] });
   }
 });
 
@@ -108,7 +108,7 @@ router.post(
       );
     } catch (err) {
       console.error(err.message);
-      res.status(500).send('Server error');
+      res.status(500).json({ errors: [{ msg: 'Server error' }] });
     }
   }
 );
@@ -149,7 +149,7 @@ router.post(
       return res.json({ msg: 'Şifre değişikliği tamamlandı' });
     } catch (err) {
       console.error(err.message);
-      res.status(500).send('Server error');
+      res.status(500).json({ errors: [{ msg: 'Server error' }] });
     }
   }
 );
