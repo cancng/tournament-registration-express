@@ -26,6 +26,26 @@ router.get('/', authMw, async (req, res) => {
 });
 
 /**
+ * @route GET /api/auth/activate/:mail_activation_token
+ * @desc Users activates their accounts by clicking activation link
+ * @access Public
+ */
+router.get('/activate/:token', (req, res) => {
+  const { token } = req.params;
+  jwt.verify(
+    token,
+    process.env.JWT_ACC_ACTIVATE,
+    async (error, decodedToken) => {
+      if (error)
+        return res.status(400).json({ errors: [{ msg: error.message }] });
+      const { email } = decodedToken;
+      await User.findOneAndUpdate({ email }, { isActive: true });
+      res.json({ msg: 'Üyeliğiniz aktifleştirildi, giriş yapabilirsiniz' });
+    }
+  );
+});
+
+/**
  * @route POST /api/auth
  * @desc Authenticate User & get token
  * @access Public
@@ -85,7 +105,7 @@ router.post(
           errors: [
             {
               msg:
-                'Üyeliğiniz pasif duruma getirilmiş, yöneticiyle iletişime geçebilirsiniz',
+                'Üyeliğiniz pasif duruma getirilmiş veya e-posta onayı yapılmamış, yöneticiyle iletişime geçebilirsiniz.',
             },
           ],
         });
@@ -112,6 +132,7 @@ router.post(
     }
   }
 );
+
 /**
  * @route POST /api/auth/changepassword
  * @desc Change the user password
