@@ -14,12 +14,6 @@ const User = require('../models/User');
 const { authMw, isAdmin } = require('../middlewares/auth');
 const checkObjectId = require('../middlewares/checkObjectId');
 
-/* const DOMAIN = 'sandboxe800f9c6832143bb8916a08dce741112.mailgun.org';
-const mg = require('mailgun-js')({
-  apiKey: '94908f5fc3de5fb8a3ae03db2a05d43f-203ef6d0-16774a90',
-  domain: DOMAIN,
-}); */
-
 /**
  * @route POST /api/users
  * @desc Register user
@@ -68,6 +62,48 @@ router.post(
           .status(400)
           .json({ errors: [{ msg: 'Bu e-posta adresi kullanılıyor' }] });
       }
+      const activationToken = jwt.sign(
+        { email },
+        process.env.JWT_ACC_ACTIVATE,
+        { expiresIn: '30m' }
+      );
+      const transporter = nm.createTransport({
+        host: 'mail.lolyama.com',
+        port: 465,
+        secure: true,
+        auth: {
+          user: 'noreply@lolyama.com',
+          pass: 'QGnyhDp2wuCzmes',
+        },
+      });
+      const sendMail = await transporter.sendMail({
+        from: 'LY Turnuva 🏅 <noreply@lolyama.com>',
+        to: email,
+        subject: 'Hesap Onayı ✅',
+        html: `
+        <h2>LoL Yama Turnuva Sistemi</h2>
+        <h4>Hesabınızı Onaylayın</h4>
+          <p>
+            Kayıt olduğunuz için teşekkürler. Aşağıdaki butona tıklayarak hesabınızı
+            aktif hale getirebilirsiniz. Eğer butona tıklayamıyorsanız linki
+            kopyalayıp tarayıcınıza yapıştırın 😊
+          </p><br><br>
+          <a
+            href="${process.env.CLIENT_URL}/activate/${activationToken}"
+            style="
+              background-color: rgb(220, 35, 15);
+              padding: 10px;
+              border-radius: 5px;
+              color: white;
+              text-decoration: none;
+              margin-bottom: 20px;
+            "
+          >
+            Onayla
+          </a><br><br>
+          ${process.env.CLIENT_URL}/activate/${activationToken}
+        `,
+      });
       const avatar = normalize(
         gravatar.url(email, {
           s: '200',
@@ -82,21 +118,10 @@ router.post(
       const salt = await bcrypt.genSalt(10);
       user.password = await bcrypt.hash(password, salt);
       await user.save();
-
-      const payload = {
-        user: {
-          id: user.id,
-        },
-      };
-      jwt.sign(
-        payload,
-        process.env.JWT_SECRET,
-        { expiresIn: '1 days' },
-        (err, encodedToken) => {
-          if (err) throw err;
-          res.json({ token: encodedToken });
-        }
-      );
+      console.log('Message sent: %s', sendMail.messageId);
+      return res.json({
+        msg: 'Üyeliğiniz oluşturuldu, lütfen e-posta adresinizi onaylayınız.',
+      });
     } catch (err) {
       console.error(err.message);
       res.status(500).json({ errors: [{ msg: 'Server error' }] });
@@ -159,7 +184,7 @@ router.post(
             kopyalayıp tarayıcınıza yapıştırın 😊
           </p><br><br>
           <a
-            href="${process.env.CLIENT_URL}/api/auth/activate/${activationToken}"
+            href="${process.env.CLIENT_URL}/activate/${activationToken}"
             style="
               background-color: rgb(220, 35, 15);
               padding: 10px;
@@ -171,7 +196,7 @@ router.post(
           >
             Onayla
           </a><br><br>
-          ${process.env.CLIENT_URL}/api/auth/activate/${activationToken}
+          ${process.env.CLIENT_URL}/activate/${activationToken}
         `,
       });
       const avatar = normalize(

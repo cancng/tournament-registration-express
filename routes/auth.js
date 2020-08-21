@@ -105,7 +105,7 @@ router.post(
           errors: [
             {
               msg:
-                'Üyeliğiniz pasif duruma getirilmiş, yöneticiyle iletişime geçebilirsiniz',
+                'Üyeliğiniz pasif duruma getirilmiş veya e-posta onayı yapılmamış, yöneticiyle iletişime geçebilirsiniz.',
             },
           ],
         });
